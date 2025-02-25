@@ -18,7 +18,10 @@ I'm a **Data Science graduate** from UM6P turned **Computer Science engineering 
 ## 📊 My GitHub Stats
 #### 📊 GitHub Profile Summary
 [![Summary](https://github-profile-summary-cards.vercel.app/api/cards/profile-details?username=imaneimrh&theme=tokyonight)](https://github.com/vn7n24fzkq/github-profile-summary-cards)
-
+#### My Top Languages 
+<div align="center">
+  <img src="github-language-stats.png" alt="My GitHub Language Distribution" width="800">
+</div>
 
 
 ## 🌱 What I'm Up To  
