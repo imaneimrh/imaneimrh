@@ -488,16 +488,7 @@ jobs:
             await new Promise(resolve => setTimeout(resolve, 2000));
             
             // Take the screenshot
-            await page.screenshot({
-              path: 'github-language-stats.png',
-              fullPage: false,
-              clip: {
-                x: 100,
-                y: 0,
-                width: 1000,
-                height: 600
-              }
-            });
+            await page.screenshot({ path: 'github-language-stats.png', fullPage: true});
             
             await browser.close();
             console.log('Screenshot saved successfully!');
