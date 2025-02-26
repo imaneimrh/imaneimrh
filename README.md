@@ -1,5 +1,6 @@
 # Hello, I'm Imane ۶ৎ✮⋆˙
-Welcome to my corner of GitHub! ⋆✴︎˚｡⋆ 
+
+⋆✴︎˚｡⋆  Welcome to my corner of GitHub! ⋆✴︎˚｡⋆ 
 
 I'm a **Data Science graduate** from UM6P turned **Computer Science engineering student** at the College of Computing - UM6P. My journey started with an obsession for gaining insights about life through analyzing the information we collect. That's why I discovered my passion for data science, and along the way, I've been diving into new and exciting fields in computing, such as building software, optimizing algorithms, or crafting useful applications.  
 
