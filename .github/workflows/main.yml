@@ -184,12 +184,18 @@ jobs:
             <title>GitHub Language Stats</title>
             <script src="https://d3js.org/d3.v7.min.js"></script>
             <style>
-              body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background-color: transparent;
-                color: #ffffff;
+              html, body {
+                background-color: transparent !important;
                 margin: 0;
                 padding: 0;
+                height: 100%;
+                width: 100%;
+                overflow: hidden;
+              }
+
+              body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                color: #ffffff;
                 display: flex;
                 justify-content: center;
                 align-items: center;
@@ -536,15 +542,16 @@ jobs:
             const padding = 10;
             
             // Take a screenshot of just the container with a small padding
-            await page.screenshot({
-              path: 'github-language-stats.png',
-              clip: {
-                x: Math.max(0, dimensions.x - padding),
-                y: Math.max(0, dimensions.y - padding),
-                width: dimensions.width + (padding * 2),
-                height: dimensions.height + (padding * 2)
-              }
-            });
+          await page.screenshot({
+            path: 'github-language-stats.png',
+            clip: {
+              x: Math.max(0, dimensions.x - padding),
+              y: Math.max(0, dimensions.y - padding),
+              width: dimensions.width + (padding * 2),
+              height: dimensions.height + (padding * 2)
+            },
+            omitBackground: true // Add this line
+          });
             
             console.log('Screenshot saved successfully!');
             await browser.close();
