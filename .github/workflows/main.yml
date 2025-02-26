@@ -175,7 +175,7 @@ jobs:
 
     - name: Generate visualization HTML
       run: |
-        # Create the HTML file with transparent background
+        # Create the HTML file
         cat > visualization.html << 'EOL'
         <!DOCTYPE html>
         <html lang="en">
@@ -185,22 +185,14 @@ jobs:
           <title>GitHub Language Stats</title>
           <script src="https://d3js.org/d3.v7.min.js"></script>
           <style>
-            html, body {
-              background-color: transparent !important;
-              margin: 0;
-              padding: 0;
-              height: 100%;
-              width: 100%;
-              overflow: hidden;
-            }
-
             body {
               font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              background-color: #1a1a1a;
               color: #ffffff;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              min-height: 100vh;
+              margin: 0;
+              padding: 20px;
+              display: block;
+              min-height: 800px;
             }
             
             .container {
@@ -210,6 +202,7 @@ jobs:
               box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
               padding: 30px;
               position: relative;
+              margin: 0 auto;
               overflow: visible;
               min-height: 600px;
             }
@@ -475,6 +468,7 @@ jobs:
                 .attr("class", "repo-label")
                 .attr("text-anchor", "middle")
                 .attr("dy", "1.5em")
+                .text("Repositories");
               
               // Create legend
               const legend = d3.select("#legend");
@@ -500,84 +494,58 @@ jobs:
         </body>
         </html>
         EOL
+
     - name: Take screenshot
-    run: |
-      # Create the screenshot script
-      cat > take-screenshot.js << 'EOL'
-      const puppeteer = require('puppeteer');
+      run: |
+          # Create a screenshot script
+          cat > take-screenshot.js << 'EOL'
+          const puppeteer = require('puppeteer');
 
-      (async () => {
-        const browser = await puppeteer.launch({
-          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security']
-        });
-        const page = await browser.newPage();
-        
-        // Set viewport
-        await page.setViewport({
-          width: 1200,
-          height: 1000,
-          deviceScaleFactor: 1,
-        });
-        
-        // Navigate to the HTML file
-        await page.goto('file://' + process.cwd() + '/visualization.html', {
-          waitUntil: 'networkidle0'
-        });
-        
-        // Wait for rendering to complete
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        // Get the exact dimensions of the container
-        const dimensions = await page.evaluate(() => {
-          const container = document.querySelector('.container');
-          const rect = container.getBoundingClientRect();
-          return {
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: rect.height
-          };
-        });
-        
-        console.log('Container dimensions:', dimensions);
-        
-        // Add small padding
-        const padding = 10;
-        
-        // Take a screenshot of just the container with a small padding
-        await page.screenshot({
-          path: 'github-language-stats.png',
-          clip: {
-            x: Math.max(0, dimensions.x - padding),
-            y: Math.max(0, dimensions.y - padding),
-            width: dimensions.width + (padding * 2),
-            height: dimensions.height + (padding * 2)
-          },
-          omitBackground: true
-        });
-        
-        console.log('Screenshot saved successfully!');
-        await browser.close();
-      })().catch(err => {
-        console.error('Error:', err);
-        process.exit(1); // Exit with error code
-      });
-      EOL
-
-      # Run the script and verify it succeeded
-      node take-screenshot.js
-      if [ ! -f github-language-stats.png ]; then
-        echo "Error: Screenshot generation failed" 
-        exit 1
-      fi
-      - name: Commit and push changes
-        run: |
+          (async () => {
+            const browser = await puppeteer.launch({
+              args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security']
+            });
+            const page = await browser.newPage();
+            
+            // Set a larger viewport
+            await page.setViewport({width: 1200, height: 1000});
+            
+            // Navigate to the HTML file
+            await page.goto('file://' + process.cwd() + '/visualization.html', {
+              waitUntil: 'networkidle0'
+            });
+            
+            // Wait longer for rendering to complete - D3 animations can take time
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            // Log current state to debug
+            await page.evaluate(() => {
+              console.log('Document state:', {
+                chartElements: document.querySelectorAll('.arc').length,
+                legendItems: document.querySelectorAll('.legend-item').length,
+                dataElements: document.querySelectorAll('path').length
+              });
+            });
+            
+            // Take the full screenshot (removed quality parameter)
+            await page.screenshot({
+              path: 'github-language-stats.png', 
+              fullPage: true,
+              omitBackground: false
+            });
+            
+            await browser.close();
+            console.log('Screenshot saved successfully!');
+          })();
+          EOL
+          
+          # Run the script
+          node take-screenshot.js
+      
+    - name: Commit and push changes
+      run: |
           git config --global user.name 'GitHub Action'
           git config --global user.email 'action@github.com'
-          if [ -f github-language-stats.png ]; then
-            git add github-language-stats.png
-            git commit -m "Update GitHub language stats visualization" || echo "No changes to commit"
-            git push
-          else
-            echo "Warning: github-language-stats.png file not found"
-          fi
+          git add github-language-stats.png
+          git commit -m "Update GitHub language stats visualization" || echo "No changes to commit"
+          git push
