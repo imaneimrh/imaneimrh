@@ -563,6 +563,10 @@ jobs:
         run: |
           git config --global user.name 'GitHub Action'
           git config --global user.email 'action@github.com'
-          git add github-language-stats.png
-          git commit -m "Update GitHub language stats visualization" || echo "No changes to commit"
-          git push
+          if [ -f github-language-stats.png ]; then
+            git add github-language-stats.png
+            git commit -m "Update GitHub language stats visualization" || echo "No changes to commit"
+            git push
+          else
+            echo "Warning: github-language-stats.png file not found"
+          fi
