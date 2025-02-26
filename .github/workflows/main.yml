@@ -485,7 +485,7 @@ jobs:
             await page.goto('file://' + process.cwd() + '/visualization.html');
             
             // Wait for chart to render
-            await page.waitForTimeout(2000);
+            await new Promise(resolve => setTimeout(resolve, 2000));
             
             // Take the screenshot
             await page.screenshot({
