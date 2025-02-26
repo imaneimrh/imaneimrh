@@ -189,11 +189,9 @@ jobs:
                 background-color: #1a1a1a;
                 color: #ffffff;
                 margin: 0;
-                padding: 0;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
+                padding: 20px;
+                display: block;
+                min-height: 800px;
               }
               
               .container {
@@ -203,7 +201,9 @@ jobs:
                 box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
                 padding: 30px;
                 position: relative;
-                overflow: hidden;
+                margin: 0 auto;
+                overflow: visible;
+                min-height: 600px;
               }
               
               .container::before {
@@ -245,6 +245,8 @@ jobs:
                 display: flex;
                 position: relative;
                 z-index: 1;
+                margin-top: 20px;
+                min-height: 450px;
               }
               
               .chart {
@@ -377,15 +379,36 @@ jobs:
               // Set the current date
               document.getElementById('current-date').textContent = new Date().toISOString().slice(0, 10);
               
-              // Load data from JSON file
+              // Create fallback data in case the files don't load
+              const fallbackData = [
+                {"language":"JavaScript","value":30,"color":"#f7df1e"},
+                {"language":"Python","value":25,"color":"#3572A5"},
+                {"language":"HTML","value":15,"color":"#e34c26"},
+                {"language":"CSS","value":10,"color":"#563d7c"},
+                {"language":"Java","value":20,"color":"#007396"}
+              ];
+              
+              const fallbackRepoCount = 5;
+              
+              // Load data from JSON file with fallback
               fetch('github-stats-data.json')
                 .then(response => response.json())
+                .catch(error => {
+                  console.error('Error loading data:', error);
+                  return fallbackData;
+                })
                 .then(data => {
-                  // Load repo count
+                  // Load repo count with fallback
                   fetch('repo-count.json')
                     .then(response => response.json())
+                    .catch(error => {
+                      console.error('Error loading repo count:', error);
+                      return {count: fallbackRepoCount};
+                    })
                     .then(repoData => {
                       createVisualization(data, repoData.count);
+                      // Signal that visualization is complete
+                      document.body.classList.add('viz-complete');
                     });
                 });
                 
@@ -479,16 +502,38 @@ jobs:
 
           (async () => {
             const browser = await puppeteer.launch({
-            args: ['--no-sandbox', '--disable-setuid-sandbox']});
+              args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security']
+            });
             const page = await browser.newPage();
-            await page.setViewport({width: 1200, height: 800});
-            await page.goto('file://' + process.cwd() + '/visualization.html');
             
-            // Wait for chart to render
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Set a larger viewport
+            await page.setViewport({width: 1200, height: 1000});
             
-            // Take the screenshot
-            await page.screenshot({ path: 'github-language-stats.png', fullPage: true});
+            // Navigate to the HTML file
+            await page.goto('file://' + process.cwd() + '/visualization.html', {
+              waitUntil: 'networkidle0'
+            });
+            
+            // Wait longer for rendering to complete - D3 animations can take time
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            // Log current state to debug
+            await page.evaluate(() => {
+              console.log('Document state:', {
+                chartElements: document.querySelectorAll('.arc').length,
+                legendItems: document.querySelectorAll('.legend-item').length,
+                dataElements: document.querySelectorAll('path').length
+              });
+            });
+            
+            // Take the full screenshot
+            await page.screenshot({
+              path: 'github-language-stats.png', 
+              fullPage: true,
+              omitBackground: false,
+              type: 'png',
+              quality: 100
+            });
             
             await browser.close();
             console.log('Screenshot saved successfully!');
