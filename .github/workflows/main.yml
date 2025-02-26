@@ -493,7 +493,6 @@ jobs:
           </body>
           </html>
           EOL
-      
       - name: Take screenshot
         run: |
           # Create a screenshot script
@@ -526,13 +525,11 @@ jobs:
               });
             });
             
-            // Take the full screenshot
+            // Take the full screenshot (removed quality parameter)
             await page.screenshot({
               path: 'github-language-stats.png', 
               fullPage: true,
-              omitBackground: false,
-              type: 'png',
-              quality: 100
+              omitBackground: false
             });
             
             await browser.close();
@@ -542,7 +539,6 @@ jobs:
           
           # Run the script
           node take-screenshot.js
-          
       - name: Commit and push changes
         run: |
           git config --global user.name 'GitHub Action'
