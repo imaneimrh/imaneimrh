@@ -1,4 +1,4 @@
-# Hello, I'm Imane ✮⋆˙
+# Hello, I'm Imane ۶ৎ✮⋆˙
 Welcome to my corner of GitHub! ⋆✴︎˚｡⋆ 
 
 I'm a **Data Science graduate** from UM6P turned **Computer Science engineering student** at the College of Computing - UM6P. My journey started with an obsession for gaining insights about life through analyzing the information we collect. That's why I discovered my passion for data science, and along the way, I've been diving into new and exciting fields in computing, such as building software, optimizing algorithms, or crafting useful applications.  
@@ -13,7 +13,7 @@ I'm a **Data Science graduate** from UM6P turned **Computer Science engineering 
 ![Symfony](https://img.shields.io/badge/-Symfony-000000?style=flat-square&logo=symfony&logoColor=white)
 ![Spring](https://img.shields.io/badge/-Spring-6DB33F?style=flat-square&logo=spring&logoColor=white)
 
-## ─── ⋆⋅☆⋅⋆ ── My GitHub Stats ─── ⋆⋅☆⋅⋆ ──
+##  My GitHub Stats 
 #### ꩜ GitHub Profile Summary
 [![Summary](https://github-profile-summary-cards.vercel.app/api/cards/profile-details?username=imaneimrh&theme=tokyonight)](https://github.com/vn7n24fzkq/github-profile-summary-cards)
 #### ꩜ My Top Languages 
