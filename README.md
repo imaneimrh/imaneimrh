@@ -27,7 +27,7 @@ I'm a **Data Science graduate** from UM6P turned **Computer Science engineering 
 Currently, I'm:  
 - Exploring **AI-driven applications** and **distributed computing**  
 - Expanding my knowledge of **system design and backend development**  
-- Working on projects that **solve real-world problems**  
+- Working on projects that **solve real-world problems**   
 
 ## 🌱 Beyond The Code  
 When I'm not immersed in code or analyzing data, you might find me **reading books** or **learning about psychology and niche subjects**.  
