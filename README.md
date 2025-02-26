@@ -32,6 +32,6 @@ Currently, I'm:
 When I'm not immersed in code or analyzing data, you might find me **reading books** or **learning about psychology and niche subjects**.  
 
 ## ⋆˚࿔ Connect With Me
-[![LinkedIn](https://img.shields.io/badge/-LinkedIn-0077B5?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/imaneimrharn/)
-
----
+  <a href="https://www.linkedin.com/in/imaneimrharn/">
+    <img src="https://img.icons8.com/fluent/48/000000/linkedin.png" width="40" height="40"/>
+  </a>
