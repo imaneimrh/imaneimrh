@@ -174,7 +174,7 @@ jobs:
         
       - name: Generate visualization HTML
         run: |
-          # Create the HTML file
+          # Create the HTML file with transparent background
           cat > visualization.html << 'EOL'
           <!DOCTYPE html>
           <html lang="en">
@@ -186,12 +186,14 @@ jobs:
             <style>
               body {
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background-color: #1a1a1a;
+                background-color: transparent;
                 color: #ffffff;
                 margin: 0;
-                padding: 20px;
-                display: block;
-                min-height: 800px;
+                padding: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
               }
               
               .container {
@@ -201,7 +203,6 @@ jobs:
                 box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
                 padding: 30px;
                 position: relative;
-                margin: 0 auto;
                 overflow: visible;
                 min-height: 600px;
               }
@@ -495,7 +496,7 @@ jobs:
           EOL
       - name: Take screenshot
         run: |
-          # Create a screenshot script
+          # Create an improved screenshot script
           cat > take-screenshot.js << 'EOL'
           const puppeteer = require('puppeteer');
 
@@ -505,37 +506,50 @@ jobs:
             });
             const page = await browser.newPage();
             
-            // Set a larger viewport
-            await page.setViewport({width: 1200, height: 1000});
+            // Set viewport
+            await page.setViewport({
+              width: 1200,
+              height: 1000,
+              deviceScaleFactor: 1,
+            });
             
             // Navigate to the HTML file
             await page.goto('file://' + process.cwd() + '/visualization.html', {
               waitUntil: 'networkidle0'
             });
             
-            // Wait longer for rendering to complete - D3 animations can take time
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            // Wait for rendering to complete
+            await new Promise(resolve => setTimeout(resolve, 3000));
             
-            // Log current state to debug
-            await page.evaluate(() => {
-              console.log('Document state:', {
-                chartElements: document.querySelectorAll('.arc').length,
-                legendItems: document.querySelectorAll('.legend-item').length,
-                dataElements: document.querySelectorAll('path').length
-              });
+            // Get the exact dimensions of the container
+            const dimensions = await page.evaluate(() => {
+              const container = document.querySelector('.container');
+              const rect = container.getBoundingClientRect();
+              return {
+                x: rect.x,
+                y: rect.y,
+                width: rect.width,
+                height: rect.height
+              };
             });
             
-            // Take the full screenshot (removed quality parameter)
+            // Add small padding
+            const padding = 10;
+            
+            // Take a screenshot of just the container with a small padding
             await page.screenshot({
-              path: 'github-language-stats.png', 
-              fullPage: true,
-              omitBackground: false
+              path: 'github-language-stats.png',
+              clip: {
+                x: Math.max(0, dimensions.x - padding),
+                y: Math.max(0, dimensions.y - padding),
+                width: dimensions.width + (padding * 2),
+                height: dimensions.height + (padding * 2)
+              }
             });
             
-            await browser.close();
             console.log('Screenshot saved successfully!');
+            await browser.close();
           })();
-          EOL
           
           # Run the script
           node take-screenshot.js
