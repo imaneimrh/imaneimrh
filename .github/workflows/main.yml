@@ -464,11 +464,7 @@ jobs:
                 .attr("dy", "-0.2em")
                 .text(repoCount);
               
-              centerText.append("text")
-                .attr("class", "repo-label")
-                .attr("text-anchor", "middle")
-                .attr("dy", "1.5em")
-                .text("Repositories");
+              
               
               // Create legend
               const legend = d3.select("#legend");
@@ -531,7 +527,7 @@ jobs:
             await page.screenshot({
               path: 'github-language-stats.png', 
               fullPage: true,
-              omitBackground: false
+              omitBackground: true
             });
             
             await browser.close();
