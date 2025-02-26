@@ -22,6 +22,7 @@ I'm a **Data Science graduate** from UM6P turned **Computer Science engineering 
 <div align="center">
   <img src="github-language-stats.png" alt="My GitHub Language Distribution">
 </div>
+
 ## 🌱 What I'm Up To  
 Currently, I'm:  
 - Exploring **AI-driven applications** and **distributed computing**  
