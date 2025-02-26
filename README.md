@@ -1,4 +1,4 @@
-# Hello, I'm Imane ۶ৎ✮⋆˙
+# Hello, I'm Imane ۶ৎ
 
 ⋆✴︎˚｡⋆  Welcome to my corner of GitHub! ⋆✴︎˚｡⋆ 
 
@@ -15,9 +15,9 @@ I'm a **Data Science graduate** from UM6P turned **Computer Science engineering 
 ![Spring](https://img.shields.io/badge/-Spring-6DB33F?style=flat-square&logo=spring&logoColor=white)
 
 ##  My GitHub Stats 
-#### ꩜ GitHub Profile Summary
+#### ✮⋆˙ GitHub Profile Summary
 [![Summary](https://github-profile-summary-cards.vercel.app/api/cards/profile-details?username=imaneimrh&theme=tokyonight)](https://github.com/vn7n24fzkq/github-profile-summary-cards)
-#### ꩜ My Top Languages 
+#### ✮⋆˙ My Top Languages 
 <div align="center">
   <img src="github-language-stats.png" alt="My GitHub Language Distribution" width="800">
 </div>
