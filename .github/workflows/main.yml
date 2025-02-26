@@ -468,7 +468,6 @@ jobs:
                   .attr("class", "repo-label")
                   .attr("text-anchor", "middle")
                   .attr("dy", "1.5em")
-                  .text("Repositories");
                 
                 // Create legend
                 const legend = d3.select("#legend");
