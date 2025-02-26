@@ -2,563 +2,574 @@ name: Update GitHub Stats Visualization
 
 on:
   schedule:
-    - cron: '0 0 * * 0'  # Run weekly on Sunday
-  workflow_dispatch:     # Allow manual trigger
+  - cron: '0 0 * * 0' # Run weekly on Sunday
+  workflow_dispatch:
+    # Allow manual trigger
 
 jobs:
   update-stats:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16'
-          
-      - name: Install dependencies
-        run: npm install puppeteer
-        
-      - name: Fetch GitHub data
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Create a script to fetch GitHub data
-          cat > fetch-data.js << 'EOL'
-          const https = require('https');
-          const fs = require('fs');
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-          const username = 'imaneimrh';
-          const token = process.env.GITHUB_TOKEN;
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
 
-          // Function to make API requests
-          function makeRequest(url) {
-            return new Promise((resolve, reject) => {
-              const options = {
-                headers: {
-                  'User-Agent': 'GitHub-Stats-Generator',
-                  'Authorization': token ? `token ${token}` : ''
-                }
-              };
+    - name: Install dependencies
+      run: npm install puppeteer
 
-              https.get(url, options, (res) => {
-                let data = '';
-                res.on('data', (chunk) => data += chunk);
-                res.on('end', () => {
-                  try {
-                    resolve(JSON.parse(data));
-                  } catch (e) {
-                    reject(e);
-                  }
-                });
-              }).on('error', reject);
-            });
-          }
+    - name: Fetch GitHub data
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Create a script to fetch GitHub data
+        cat > fetch-data.js << 'EOL'
+        const https = require('https');
+        const fs = require('fs');
 
-          // Get all repositories for the user
-          async function getAllRepos() {
-            const repos = [];
-            let page = 1;
-            
-            while (true) {
-              const url = `https://api.github.com/users/${username}/repos?per_page=100&page=${page}&type=all`;
-              const data = await makeRequest(url);
-              
-              if (!data || data.length === 0) break;
-              
-              repos.push(...data);
-              page++;
-            }
-            
-            return repos;
-          }
+        const username = 'imaneimrh';
+        const token = process.env.GITHUB_TOKEN;
 
-          // Get language statistics
-          async function getLanguageStats(repos) {
-            const languageStats = {};
-            
-            for (const repo of repos) {
-              if (repo.fork) continue; // Skip forked repositories if desired
-              
-              const url = repo.languages_url;
-              const languages = await makeRequest(url);
-              
-              for (const [language, bytes] of Object.entries(languages)) {
-                languageStats[language] = (languageStats[language] || 0) + bytes;
+        // Function to make API requests
+        function makeRequest(url) {
+          return new Promise((resolve, reject) => {
+            const options = {
+              headers: {
+                'User-Agent': 'GitHub-Stats-Generator',
+                'Authorization': token ? `token ${token}` : ''
               }
-            }
-            
-            return languageStats;
-          }
-
-          // Format data for visualization
-          function formatData(stats) {
-            const totalBytes = Object.values(stats).reduce((a, b) => a + b, 0);
-            
-            // Convert to percentage and format
-            const formattedData = Object.entries(stats).map(([language, bytes]) => {
-              const percentage = (bytes / totalBytes * 100).toFixed(1);
-              return { language, value: parseFloat(percentage) };
-            });
-            
-            // Sort by percentage (descending)
-            formattedData.sort((a, b) => b.value - a.value);
-            
-            // Assign colors to languages
-            const colors = {
-              'JavaScript': '#f7df1e',
-              'TypeScript': '#3178c6',
-              'HTML': '#e34c26',
-              'CSS': '#563d7c',
-              'Python': '#3572A5',
-              'Java': '#007396',
-              'C++': '#f34b7d',
-              'C': '#555555',
-              'C#': '#178600',
-              'Go': '#00ADD8',
-              'Ruby': '#CC342D',
-              'PHP': '#4F5D95',
-              'Swift': '#F05138',
-              'Kotlin': '#A97BFF',
-              'Rust': '#DEA584',
-              'Vue': '#41B883'
             };
-            
-            // Apply colors and handle "Other" languages
-            let result = formattedData.slice(0, 8).map(item => ({
-              ...item,
-              color: colors[item.language] || '#' + Math.floor(Math.random() * 16777215).toString(16)
-            }));
-            
-            // Group remaining languages as "Other"
-            if (formattedData.length > 8) {
-              const otherValue = formattedData.slice(8).reduce((sum, item) => sum + item.value, 0);
-              if (otherValue > 0) {
-                result.push({
-                  language: 'Other',
-                  value: parseFloat(otherValue.toFixed(1)),
-                  color: '#333333'
-                });
-              }
-            }
-            
-            return result;
-          }
 
-          // Main function
-          async function main() {
-            try {
-              const repos = await getAllRepos();
-              const stats = await getLanguageStats(repos);
-              const formattedData = formatData(stats);
-              
-              // Save data to file
-              fs.writeFileSync('github-stats-data.json', JSON.stringify(formattedData, null, 2));
-              
-              // Also save number of repositories
-              fs.writeFileSync('repo-count.json', JSON.stringify({ count: repos.filter(r => !r.fork).length }));
-              
-              console.log('Data fetched and saved successfully!');
-            } catch (error) {
-              console.error('Error:', error);
-              process.exit(1);
-            }
-          }
-
-          main();
-          EOL
-          
-          # Run the script
-          node fetch-data.js
-        
-      - name: Generate visualization HTML
-        run: |
-          # Create the HTML file with transparent background
-          cat > visualization.html << 'EOL'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>GitHub Language Stats</title>
-            <script src="https://d3js.org/d3.v7.min.js"></script>
-            <style>
-              html, body {
-                background-color: transparent !important;
-                margin: 0;
-                padding: 0;
-                height: 100%;
-                width: 100%;
-                overflow: hidden;
-              }
-
-              body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                color: #ffffff;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 100vh;
-              }
-              
-              .container {
-                width: 1000px;
-                background-color: #222222;
-                border-radius: 10px;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-                padding: 30px;
-                position: relative;
-                overflow: visible;
-                min-height: 600px;
-              }
-              
-              .container::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: linear-gradient(45deg, rgba(76, 76, 255, 0.05), rgba(255, 76, 76, 0.05));
-                z-index: 0;
-              }
-              
-              .heading {
-                position: relative;
-                z-index: 1;
-                text-align: center;
-                margin-bottom: 40px;
-              }
-              
-              h1 {
-                font-size: 36px;
-                font-weight: 700;
-                margin: 0;
-                background: linear-gradient(90deg, #6c63ff, #ff6584);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                text-shadow: 0 2px 10px rgba(108, 99, 255, 0.2);
-              }
-              
-              h2 {
-                font-size: 18px;
-                font-weight: 400;
-                color: #cccccc;
-                margin: 5px 0 0 0;
-              }
-              
-              .chart-container {
-                display: flex;
-                position: relative;
-                z-index: 1;
-                margin-top: 20px;
-                min-height: 450px;
-              }
-              
-              .chart {
-                flex: 1;
-                position: relative;
-              }
-              
-              .legend {
-                flex: 1;
-                padding-left: 40px;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-              }
-              
-              .legend-item {
-                display: flex;
-                align-items: center;
-                margin-bottom: 15px;
-                font-size: 18px;
-                transition: transform 0.2s;
-              }
-              
-              .legend-item:hover {
-                transform: translateX(5px);
-              }
-              
-              .legend-color {
-                width: 20px;
-                height: 20px;
-                border-radius: 5px;
-                margin-right: 15px;
-                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-              }
-              
-              .legend-text {
-                font-weight: 500;
-              }
-              
-              .legend-percent {
-                margin-left: 10px;
-                font-weight: 300;
-                color: #cccccc;
-              }
-              
-              .center-text {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                text-align: center;
-              }
-              
-              .total-repos {
-                font-size: 20px;
-                font-weight: 700;
-                color: #ffffff;
-              }
-              
-              .repo-label {
-                font-size: 16px;
-                color: #cccccc;
-              }
-              
-              .glow-effect {
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                pointer-events: none;
-                background: radial-gradient(circle at 50% 50%, rgba(76, 76, 255, 0.1), transparent 60%);
-                z-index: 0;
-              }
-              
-              /* Tooltip styles */
-              .tooltip {
-                position: absolute;
-                background-color: rgba(40, 40, 40, 0.9);
-                color: #ffffff;
-                padding: 10px 15px;
-                border-radius: 5px;
-                font-size: 14px;
-                pointer-events: none;
-                opacity: 0;
-                transition: opacity 0.3s;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-                z-index: 10;
-                backdrop-filter: blur(4px);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-              }
-              
-              .tooltip-language {
-                font-weight: 700;
-                font-size: 16px;
-              }
-              
-              .tooltip-value {
-                margin-top: 5px;
-                display: flex;
-                justify-content: space-between;
-              }
-              
-              .tooltip-bytes {
-                color: #cccccc;
-                margin-left: 15px;
-              }
-              
-              /* Path hover effect */
-              path.arc:hover {
-                filter: brightness(1.2);
-                cursor: pointer;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="glow-effect"></div>
-              <div class="heading">
-                <h1>imaneimrh's GitHub Language Distribution</h1>
-                <h2>Updated: <span id="current-date"></span></h2>
-              </div>
-              <div class="chart-container">
-                <div class="chart" id="chart"></div>
-                <div class="legend" id="legend"></div>
-              </div>
-            </div>
-            
-            <div class="tooltip" id="tooltip"></div>
-
-            <script>
-              // Set the current date
-              document.getElementById('current-date').textContent = new Date().toISOString().slice(0, 10);
-              
-              // Create fallback data in case the files don't load
-              const fallbackData = [
-                {"language":"JavaScript","value":30,"color":"#f7df1e"},
-                {"language":"Python","value":25,"color":"#3572A5"},
-                {"language":"HTML","value":15,"color":"#e34c26"},
-                {"language":"CSS","value":10,"color":"#563d7c"},
-                {"language":"Java","value":20,"color":"#007396"}
-              ];
-              
-              const fallbackRepoCount = 5;
-              
-              // Load data from JSON file with fallback
-              fetch('github-stats-data.json')
-                .then(response => response.json())
-                .catch(error => {
-                  console.error('Error loading data:', error);
-                  return fallbackData;
-                })
-                .then(data => {
-                  // Load repo count with fallback
-                  fetch('repo-count.json')
-                    .then(response => response.json())
-                    .catch(error => {
-                      console.error('Error loading repo count:', error);
-                      return {count: fallbackRepoCount};
-                    })
-                    .then(repoData => {
-                      createVisualization(data, repoData.count);
-                      // Signal that visualization is complete
-                      document.body.classList.add('viz-complete');
-                    });
-                });
-                
-              function createVisualization(data, repoCount) {
-                // Set up dimensions
-                const width = 450;
-                const height = 450;
-                const radius = Math.min(width, height) / 2;
-                
-                // Create SVG
-                const svg = d3.select("#chart")
-                  .append("svg")
-                  .attr("width", width)
-                  .attr("height", height)
-                  .append("g")
-                  .attr("transform", `translate(${width / 2}, ${height / 2})`);
-                
-                // Create donut chart
-                const arc = d3.arc()
-                  .innerRadius(radius * 0.6)
-                  .outerRadius(radius);
-                
-                const outerArc = d3.arc()
-                  .innerRadius(radius * 1.1)
-                  .outerRadius(radius * 1.1);
-                
-                const pie = d3.pie()
-                  .value(d => d.value)
-                  .sort(null);
-                
-                // Add arcs
-                const path = svg.selectAll(".arc")
-                  .data(pie(data))
-                  .enter()
-                  .append("path")
-                  .attr("class", "arc")
-                  .attr("d", arc)
-                  .attr("fill", d => d.data.color)
-                  .attr("stroke", "#222222")
-                  .attr("stroke-width", 2)
-                  .attr("data-language", d => d.data.language)
-                  .style("filter", "drop-shadow(0px 3px 5px rgba(0, 0, 0, 0.3))")
-                  .style("transition", "all 0.3s");
-                
-                // Add center text
-                const centerText = svg.append("g")
-                  .attr("class", "center-text");
-                
-                centerText.append("text")
-                  .attr("class", "total-repos")
-                  .attr("text-anchor", "middle")
-                  .attr("dy", "-0.2em")
-                  .text(repoCount);
-                
-                centerText.append("text")
-                  .attr("class", "repo-label")
-                  .attr("text-anchor", "middle")
-                  .attr("dy", "1.5em")
-                
-                // Create legend
-                const legend = d3.select("#legend");
-                
-                data.forEach(d => {
-                  const legendItem = legend.append("div")
-                    .attr("class", "legend-item");
-                  
-                  legendItem.append("div")
-                    .attr("class", "legend-color")
-                    .style("background-color", d.color);
-                  
-                  legendItem.append("div")
-                    .attr("class", "legend-text")
-                    .text(d.language);
-                  
-                  legendItem.append("div")
-                    .attr("class", "legend-percent")
-                    .text(`${d.value}%`);
-                });
-              }
-            </script>
-          </body>
-          </html>
-          EOL
-      - name: Take screenshot
-        run: |
-          # Create an improved screenshot script
-          cat > take-screenshot.js << 'EOL'
-          const puppeteer = require('puppeteer');
-
-          (async () => {
-            const browser = await puppeteer.launch({
-              args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security']
-            });
-            const page = await browser.newPage();
-            
-            // Set viewport
-            await page.setViewport({
-              width: 1200,
-              height: 1000,
-              deviceScaleFactor: 1,
-            });
-            
-            // Navigate to the HTML file
-            await page.goto('file://' + process.cwd() + '/visualization.html', {
-              waitUntil: 'networkidle0'
-            });
-            
-            // Wait for rendering to complete
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            
-            // Get the exact dimensions of the container
-            const dimensions = await page.evaluate(() => {
-              const container = document.querySelector('.container');
-              const rect = container.getBoundingClientRect();
-              return {
-                x: rect.x,
-                y: rect.y,
-                width: rect.width,
-                height: rect.height
-              };
-            });
-            
-            // Add small padding
-            const padding = 10;
-            
-            // Take a screenshot of just the container with a small padding
-          await page.screenshot({
-            path: 'github-language-stats.png',
-            clip: {
-              x: Math.max(0, dimensions.x - padding),
-              y: Math.max(0, dimensions.y - padding),
-              width: dimensions.width + (padding * 2),
-              height: dimensions.height + (padding * 2)
-            },
-            omitBackground: true // Add this line
+            https.get(url, options, (res) => {
+              let data = '';
+              res.on('data', (chunk) => data += chunk);
+              res.on('end', () => {
+                try {
+                  resolve(JSON.parse(data));
+                } catch (e) {
+                  reject(e);
+                }
+              });
+            }).on('error', reject);
           });
-            
-            console.log('Screenshot saved successfully!');
-            await browser.close();
-          })();
+        }
+
+        // Get all repositories for the user
+        async function getAllRepos() {
+          const repos = [];
+          let page = 1;
           
-          # Run the script
-          node take-screenshot.js
+          while (true) {
+            const url = `https://api.github.com/users/${username}/repos?per_page=100&page=${page}&type=all`;
+            const data = await makeRequest(url);
+            
+            if (!data || data.length === 0) break;
+            
+            repos.push(...data);
+            page++;
+          }
+          
+          return repos;
+        }
+
+        // Get language statistics
+        async function getLanguageStats(repos) {
+          const languageStats = {};
+          
+          for (const repo of repos) {
+            if (repo.fork) continue; // Skip forked repositories if desired
+            
+            const url = repo.languages_url;
+            const languages = await makeRequest(url);
+            
+            for (const [language, bytes] of Object.entries(languages)) {
+              languageStats[language] = (languageStats[language] || 0) + bytes;
+            }
+          }
+          
+          return languageStats;
+        }
+
+        // Format data for visualization
+        function formatData(stats) {
+          const totalBytes = Object.values(stats).reduce((a, b) => a + b, 0);
+          
+          // Convert to percentage and format
+          const formattedData = Object.entries(stats).map(([language, bytes]) => {
+            const percentage = (bytes / totalBytes * 100).toFixed(1);
+            return { language, value: parseFloat(percentage) };
+          });
+          
+          // Sort by percentage (descending)
+          formattedData.sort((a, b) => b.value - a.value);
+          
+          // Assign colors to languages
+          const colors = {
+            'JavaScript': '#f7df1e',
+            'TypeScript': '#3178c6',
+            'HTML': '#e34c26',
+            'CSS': '#563d7c',
+            'Python': '#3572A5',
+            'Java': '#007396',
+            'C++': '#f34b7d',
+            'C': '#555555',
+            'C#': '#178600',
+            'Go': '#00ADD8',
+            'Ruby': '#CC342D',
+            'PHP': '#4F5D95',
+            'Swift': '#F05138',
+            'Kotlin': '#A97BFF',
+            'Rust': '#DEA584',
+            'Vue': '#41B883'
+          };
+          
+          // Apply colors and handle "Other" languages
+          let result = formattedData.slice(0, 8).map(item => ({
+            ...item,
+            color: colors[item.language] || '#' + Math.floor(Math.random() * 16777215).toString(16)
+          }));
+          
+          // Group remaining languages as "Other"
+          if (formattedData.length > 8) {
+            const otherValue = formattedData.slice(8).reduce((sum, item) => sum + item.value, 0);
+            if (otherValue > 0) {
+              result.push({
+                language: 'Other',
+                value: parseFloat(otherValue.toFixed(1)),
+                color: '#333333'
+              });
+            }
+          }
+          
+          return result;
+        }
+
+        // Main function
+        async function main() {
+          try {
+            const repos = await getAllRepos();
+            const stats = await getLanguageStats(repos);
+            const formattedData = formatData(stats);
+            
+            // Save data to file
+            fs.writeFileSync('github-stats-data.json', JSON.stringify(formattedData, null, 2));
+            
+            // Also save number of repositories
+            fs.writeFileSync('repo-count.json', JSON.stringify({ count: repos.filter(r => !r.fork).length }));
+            
+            console.log('Data fetched and saved successfully!');
+          } catch (error) {
+            console.error('Error:', error);
+            process.exit(1);
+          }
+        }
+
+        main();
+        EOL
+
+        # Run the script
+        node fetch-data.js
+
+    - name: Generate visualization HTML
+      run: |
+        # Create the HTML file with transparent background
+        cat > visualization.html << 'EOL'
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>GitHub Language Stats</title>
+          <script src="https://d3js.org/d3.v7.min.js"></script>
+          <style>
+            html, body {
+              background-color: transparent !important;
+              margin: 0;
+              padding: 0;
+              height: 100%;
+              width: 100%;
+              overflow: hidden;
+            }
+
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              color: #ffffff;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+            }
+            
+            .container {
+              width: 1000px;
+              background-color: #222222;
+              border-radius: 10px;
+              box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+              padding: 30px;
+              position: relative;
+              overflow: visible;
+              min-height: 600px;
+            }
+            
+            .container::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              background: linear-gradient(45deg, rgba(76, 76, 255, 0.05), rgba(255, 76, 76, 0.05));
+              z-index: 0;
+            }
+            
+            .heading {
+              position: relative;
+              z-index: 1;
+              text-align: center;
+              margin-bottom: 40px;
+            }
+            
+            h1 {
+              font-size: 36px;
+              font-weight: 700;
+              margin: 0;
+              background: linear-gradient(90deg, #6c63ff, #ff6584);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              text-shadow: 0 2px 10px rgba(108, 99, 255, 0.2);
+            }
+            
+            h2 {
+              font-size: 18px;
+              font-weight: 400;
+              color: #cccccc;
+              margin: 5px 0 0 0;
+            }
+            
+            .chart-container {
+              display: flex;
+              position: relative;
+              z-index: 1;
+              margin-top: 20px;
+              min-height: 450px;
+            }
+            
+            .chart {
+              flex: 1;
+              position: relative;
+            }
+            
+            .legend {
+              flex: 1;
+              padding-left: 40px;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+            }
+            
+            .legend-item {
+              display: flex;
+              align-items: center;
+              margin-bottom: 15px;
+              font-size: 18px;
+              transition: transform 0.2s;
+            }
+            
+            .legend-item:hover {
+              transform: translateX(5px);
+            }
+            
+            .legend-color {
+              width: 20px;
+              height: 20px;
+              border-radius: 5px;
+              margin-right: 15px;
+              box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            }
+            
+            .legend-text {
+              font-weight: 500;
+            }
+            
+            .legend-percent {
+              margin-left: 10px;
+              font-weight: 300;
+              color: #cccccc;
+            }
+            
+            .center-text {
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              text-align: center;
+            }
+            
+            .total-repos {
+              font-size: 20px;
+              font-weight: 700;
+              color: #ffffff;
+            }
+            
+            .repo-label {
+              font-size: 16px;
+              color: #cccccc;
+            }
+            
+            .glow-effect {
+              position: absolute;
+              width: 100%;
+              height: 100%;
+              pointer-events: none;
+              background: radial-gradient(circle at 50% 50%, rgba(76, 76, 255, 0.1), transparent 60%);
+              z-index: 0;
+            }
+            
+            /* Tooltip styles */
+            .tooltip {
+              position: absolute;
+              background-color: rgba(40, 40, 40, 0.9);
+              color: #ffffff;
+              padding: 10px 15px;
+              border-radius: 5px;
+              font-size: 14px;
+              pointer-events: none;
+              opacity: 0;
+              transition: opacity 0.3s;
+              box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+              z-index: 10;
+              backdrop-filter: blur(4px);
+              border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            .tooltip-language {
+              font-weight: 700;
+              font-size: 16px;
+            }
+            
+            .tooltip-value {
+              margin-top: 5px;
+              display: flex;
+              justify-content: space-between;
+            }
+            
+            .tooltip-bytes {
+              color: #cccccc;
+              margin-left: 15px;
+            }
+            
+            /* Path hover effect */
+            path.arc:hover {
+              filter: brightness(1.2);
+              cursor: pointer;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="glow-effect"></div>
+            <div class="heading">
+              <h1>imaneimrh's GitHub Language Distribution</h1>
+              <h2>Updated: <span id="current-date"></span></h2>
+            </div>
+            <div class="chart-container">
+              <div class="chart" id="chart"></div>
+              <div class="legend" id="legend"></div>
+            </div>
+          </div>
+          
+          <div class="tooltip" id="tooltip"></div>
+
+          <script>
+            // Set the current date
+            document.getElementById('current-date').textContent = new Date().toISOString().slice(0, 10);
+            
+            // Create fallback data in case the files don't load
+            const fallbackData = [
+              {"language":"JavaScript","value":30,"color":"#f7df1e"},
+              {"language":"Python","value":25,"color":"#3572A5"},
+              {"language":"HTML","value":15,"color":"#e34c26"},
+              {"language":"CSS","value":10,"color":"#563d7c"},
+              {"language":"Java","value":20,"color":"#007396"}
+            ];
+            
+            const fallbackRepoCount = 5;
+            
+            // Load data from JSON file with fallback
+            fetch('github-stats-data.json')
+              .then(response => response.json())
+              .catch(error => {
+                console.error('Error loading data:', error);
+                return fallbackData;
+              })
+              .then(data => {
+                // Load repo count with fallback
+                fetch('repo-count.json')
+                  .then(response => response.json())
+                  .catch(error => {
+                    console.error('Error loading repo count:', error);
+                    return {count: fallbackRepoCount};
+                  })
+                  .then(repoData => {
+                    createVisualization(data, repoData.count);
+                    // Signal that visualization is complete
+                    document.body.classList.add('viz-complete');
+                  });
+              });
+              
+            function createVisualization(data, repoCount) {
+              // Set up dimensions
+              const width = 450;
+              const height = 450;
+              const radius = Math.min(width, height) / 2;
+              
+              // Create SVG
+              const svg = d3.select("#chart")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", `translate(${width / 2}, ${height / 2})`);
+              
+              // Create donut chart
+              const arc = d3.arc()
+                .innerRadius(radius * 0.6)
+                .outerRadius(radius);
+              
+              const outerArc = d3.arc()
+                .innerRadius(radius * 1.1)
+                .outerRadius(radius * 1.1);
+              
+              const pie = d3.pie()
+                .value(d => d.value)
+                .sort(null);
+              
+              // Add arcs
+              const path = svg.selectAll(".arc")
+                .data(pie(data))
+                .enter()
+                .append("path")
+                .attr("class", "arc")
+                .attr("d", arc)
+                .attr("fill", d => d.data.color)
+                .attr("stroke", "#222222")
+                .attr("stroke-width", 2)
+                .attr("data-language", d => d.data.language)
+                .style("filter", "drop-shadow(0px 3px 5px rgba(0, 0, 0, 0.3))")
+                .style("transition", "all 0.3s");
+              
+              // Add center text
+              const centerText = svg.append("g")
+                .attr("class", "center-text");
+              
+              centerText.append("text")
+                .attr("class", "total-repos")
+                .attr("text-anchor", "middle")
+                .attr("dy", "-0.2em")
+                .text(repoCount);
+              
+              centerText.append("text")
+                .attr("class", "repo-label")
+                .attr("text-anchor", "middle")
+                .attr("dy", "1.5em")
+              
+              // Create legend
+              const legend = d3.select("#legend");
+              
+              data.forEach(d => {
+                const legendItem = legend.append("div")
+                  .attr("class", "legend-item");
+                
+                legendItem.append("div")
+                  .attr("class", "legend-color")
+                  .style("background-color", d.color);
+                
+                legendItem.append("div")
+                  .attr("class", "legend-text")
+                  .text(d.language);
+                
+                legendItem.append("div")
+                  .attr("class", "legend-percent")
+                  .text(`${d.value}%`);
+              });
+            }
+          </script>
+        </body>
+        </html>
+        EOL
+    - name: Take screenshot
+    run: |
+      # Create the screenshot script
+      cat > take-screenshot.js << 'EOL'
+      const puppeteer = require('puppeteer');
+
+      (async () => {
+        const browser = await puppeteer.launch({
+          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security']
+        });
+        const page = await browser.newPage();
+        
+        // Set viewport
+        await page.setViewport({
+          width: 1200,
+          height: 1000,
+          deviceScaleFactor: 1,
+        });
+        
+        // Navigate to the HTML file
+        await page.goto('file://' + process.cwd() + '/visualization.html', {
+          waitUntil: 'networkidle0'
+        });
+        
+        // Wait for rendering to complete
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Get the exact dimensions of the container
+        const dimensions = await page.evaluate(() => {
+          const container = document.querySelector('.container');
+          const rect = container.getBoundingClientRect();
+          return {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height
+          };
+        });
+        
+        console.log('Container dimensions:', dimensions);
+        
+        // Add small padding
+        const padding = 10;
+        
+        // Take a screenshot of just the container with a small padding
+        await page.screenshot({
+          path: 'github-language-stats.png',
+          clip: {
+            x: Math.max(0, dimensions.x - padding),
+            y: Math.max(0, dimensions.y - padding),
+            width: dimensions.width + (padding * 2),
+            height: dimensions.height + (padding * 2)
+          },
+          omitBackground: true
+        });
+        
+        console.log('Screenshot saved successfully!');
+        await browser.close();
+      })().catch(err => {
+        console.error('Error:', err);
+        process.exit(1); // Exit with error code
+      });
+      EOL
+
+      # Run the script and verify it succeeded
+      node take-screenshot.js
+      if [ ! -f github-language-stats.png ]; then
+        echo "Error: Screenshot generation failed" 
+        exit 1
+      fi
       - name: Commit and push changes
         run: |
           git config --global user.name 'GitHub Action'
